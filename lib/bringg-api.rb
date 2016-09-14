@@ -99,7 +99,7 @@ module BringgApi
       @result["way_points"].each do |way_point|
         note = BringgApi::CreateNote.new(@id, way_point["id"])
         note.set_params(_note)
-        return note.send
+        note.send
       end
     end
   end

@@ -171,7 +171,7 @@ module BringgApi
   end
     
   module Note
-    class CreateNote < BringgActionPost
+    class Create < BringgActionPost
       def initialize(task_id, way_point_id)
         @url = "https://developer-api.bringg.com/partner_api/tasks/"+task_id.to_s+"/way_points/"+way_point_id.to_s+"/notes"
         super()

@@ -1,9 +1,9 @@
 Gem::Specification.new do |s|
   s.name        = 'bringg-api'
-  s.version     = '0.0.1'
-  s.date        = '2016-09-13'
-  s.summary     = "Hola!"
-  s.description = "A simple hello world gem"
+  s.version     = '0.0.2'
+  s.date        = '2016-09-14'
+  s.summary     = "Bringg Api Gem"
+  s.description = "Gem for Bringg API"
   s.authors     = ["Stephen Edwards"]
   s.email       = 'stephen.edwards@foostix.com'
   s.files       = ["lib/bringg-api.rb"]

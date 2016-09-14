@@ -19,7 +19,7 @@ module BringgApi
       end
     end
     
-    def set_params(args = {})
+    def set_params(args = {})      
       args.each do |k,v|
         @params[k] = v
       end
@@ -64,34 +64,59 @@ module BringgApi
     
   class CreateTask < BringgAction
     def initialize
-      @url = "https://developer-api.bringg.com/partner_api/tasks"      
+      @url = "https://developer-api.bringg.com/partner_api/tasks"
+      @id = nil
       super
     end   
     
     def send
-      super["task"]
+      result = super["task"]
+      @id = result["id"]
+      return result
     end
     
   end
   
   class CreateTaskWithWayPoints < BringgAction
     def initialize
-      @url = "https://developer-api.bringg.com/partner_api/tasks/create_with_way_points"      
+      @url = "https://developer-api.bringg.com/partner_api/tasks/create_with_way_points"
+      @id = nil  
+      @result = nil    
       super
     end
     
     def send
-      super["task"]
+      @result = super["task"]
+      @id = @result["id"]
+      return @result
     end
-     
+    
+    def add_note_to_waypoints(_note)
+      if @result.nil? || @id.nil?
+        return false
+      end 
+      
+      @result["way_points"].each do |way_point|
+        note = BringgApi::CreateNote.new(@id, way_point["id"])
+        note.set_params(_note)
+        return note.send
+      end
+    end
+  end
+  
+  class CreateNote < BringgAction
+    def initialize(task_id, way_point_id)
+      @url = "https://developer-api.bringg.com/partner_api/tasks/"+task_id.to_s+"/way_points/"+way_point_id.to_s+"/notes"
+      super()
+    end
   end
   
   module BringgApiException
-    class MissingOptions < Exception      
+    class MissingOptions < Exception
     end
-    class ActionError < Exception      
+    class ActionError < Exception
     end
     class HTTPError < Exception
-    end            
+    end
   end
 end

@@ -1,6 +1,6 @@
 Gem::Specification.new do |s|
   s.name        = 'bringg-api'
-  s.version     = '0.0.4'
+  s.version     = '0.0.5'
   s.date        = '2016-09-14'
   s.summary     = "Bringg Api Gem"
   s.description = "Gem for Bringg API"

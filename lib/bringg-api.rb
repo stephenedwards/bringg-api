@@ -49,8 +49,14 @@ module BringgApi
       req = Net::HTTP::Post.new(uri, 'Content-Type' => 'application/json')
       req.body = @params.to_json
       http = Net::HTTP.new(uri.hostname, uri.port)
-      http.use_ssl = true
-      res = http.request(req)      
+      http.use_ssl = (uri.scheme == "https")
+      res = http.request(req)
+      j = JSON.parse(res.body)
+      if j["success"]
+        return j ["task"]
+      else
+        raise BringgApiException::ErrorCreatingTask, j["message"]
+      end
     end
   end
   
@@ -61,6 +67,9 @@ module BringgApi
     class IncorrectParams < Exception 
     end
     class MissingParams < Exception 
+    end
+    class ErrorCreatingTask < Exception
+      
     end
   end
 end

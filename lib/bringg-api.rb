@@ -8,7 +8,9 @@ module BringgApi
     attr_accessor :options
   end
   
-  class BringgAction
+  class BringgActionPost    
+    attr_accessor :url
+    
     def initialize
       @params = {}
       required_options = [:company_id, :access_token, :secret_key]
@@ -29,14 +31,14 @@ module BringgApi
     def send
       #Create request
       uri = URI(@url)
-      req = Net::HTTP::Post.new(uri, 'Content-Type' => 'application/json')
+      req = Net::HTTP::Post.new(uri.request_uri, 'Content-Type' => 'application/json')
       
       #add timestamp and token to params
       @params[:timestamp] = Time.now().to_i
       @params[:access_token] = BringgApi.options[:access_token]
       @params[:company_id] = BringgApi.options[:company_id]
       tmpQuery = URI.encode_www_form(@params)
-      p tmpQuery
+      
       #sign params      
       @params[:signature] = OpenSSL::HMAC.hexdigest("sha1", BringgApi.options[:secret_key], tmpQuery).to_s
             
@@ -44,9 +46,7 @@ module BringgApi
       http = Net::HTTP.new(uri.hostname, uri.port)
       http.use_ssl = (uri.scheme == "https")
       res = http.request(req)
-      p res.code
-      p res.message
-      p res.body
+      
       if res.code == "200"
         j = JSON.parse(res.body)
         if j["success"]          
@@ -56,61 +56,190 @@ module BringgApi
         end  
       else
         raise BringgApiException::HTTPError, res.code.to_s + " " + res.message
-      end      
-      
-    end
-    
-  end
-    
-  class CreateTask < BringgAction
-    def initialize
-      @url = "https://developer-api.bringg.com/partner_api/tasks"
-      @id = nil
-      super
-    end   
-    
-    def send
-      result = super["task"]
-      @id = result["id"]
-      return result
-    end
-    
-  end
-  
-  class CreateTaskWithWayPoints < BringgAction
-    def initialize
-      @url = "https://developer-api.bringg.com/partner_api/tasks/create_with_way_points"
-      @id = nil  
-      @result = nil    
-      super
-    end
-    
-    def send
-      @result = super["task"]
-      @id = @result["id"]
-      return @result
-    end
-    
-    def add_note_to_waypoints(_note)
-      if @result.nil? || @id.nil?
-        return false
-      end 
-      
-      @result["way_points"].each do |way_point|
-        note = BringgApi::CreateNote.new(@id, way_point["id"])
-        note.set_params(_note)
-        note.send
       end
     end
   end
   
-  class CreateNote < BringgAction
-    def initialize(task_id, way_point_id)
-      @url = "https://developer-api.bringg.com/partner_api/tasks/"+task_id.to_s+"/way_points/"+way_point_id.to_s+"/notes"
-      super()
+  class BringgActionGet < BringgActionPost   
+    attr_accessor :url     
+    def send
+      #Create request      
+      uri = URI(@url)
+      
+      #add timestamp and token to params
+      @params[:timestamp] = Time.now().to_i
+      @params[:access_token] = BringgApi.options[:access_token]
+      @params[:company_id] = BringgApi.options[:company_id]
+      tmpQuery = URI.encode_www_form(@params)
+      
+      #sign params      
+      @params[:signature] = OpenSSL::HMAC.hexdigest("sha1", BringgApi.options[:secret_key], tmpQuery).to_s            
+      uri.query = URI.encode_www_form(@params)
+      
+      Net::HTTP.start(uri.host, uri.port, :use_ssl => (uri.scheme == 'https')) do |http|
+        request = Net::HTTP::Get.new uri.request_uri        
+        res = http.request(request)
+        if res.code == "200"
+          j = JSON.parse(res.body)          
+          return j           
+        else
+          if res.code == "404"
+            raise BringgApiException::HTTPNotFound, res.code.to_s + " " + res.message 
+          else
+            raise BringgApiException::HTTPError, res.code.to_s + " " + res.message
+          end
+        end
+      end 
     end
   end
   
+  class BringgActionPatch < BringgActionPost   
+    attr_accessor :url     
+    def send
+      #Create request
+      uri = URI(@url)
+      req = Net::HTTP::Patch.new(uri.request_uri, 'Content-Type' => 'application/json')
+      
+      #add timestamp and token to params
+      @params[:timestamp] = Time.now().to_i
+      @params[:access_token] = BringgApi.options[:access_token]
+      @params[:company_id] = BringgApi.options[:company_id]
+      tmpQuery = URI.encode_www_form(@params)
+      
+      #sign params      
+      @params[:signature] = OpenSSL::HMAC.hexdigest("sha1", BringgApi.options[:secret_key], tmpQuery).to_s
+            
+      req.body = @params.to_json
+      http = Net::HTTP.new(uri.hostname, uri.port)
+      http.use_ssl = (uri.scheme == "https")
+      res = http.request(req)
+      
+      if res.code == "200"
+        j = JSON.parse(res.body)
+        if j["success"]          
+          return j
+        else
+          raise BringgApiException::ActionError, j["message"]
+        end  
+      else
+        raise BringgApiException::HTTPError, res.code.to_s + " " + res.message
+      end
+    end
+  end
+  
+  module Task
+    class Create < BringgActionPost
+      def initialize
+        @url = "https://developer-api.bringg.com/partner_api/tasks"
+        @id = nil
+        super
+      end   
+      
+      def send
+        result = super["task"]
+        @id = result["id"]
+        return result
+      end
+    end
+    
+    class CreateWithWayPoints < BringgActionPost
+      def initialize
+        @url = "https://developer-api.bringg.com/partner_api/tasks/create_with_way_points"
+        @id = nil  
+        @result = nil    
+        super
+      end
+      
+      def send
+        @result = super["task"]
+        @id = @result["id"]
+        return @result
+      end
+      
+      def add_note_to_waypoints(_note)
+        if @result.nil? || @id.nil?
+          return false
+        end
+        
+        @result["way_points"].each do |way_point|
+          note = BringgApi::Note::Create.new(@id, way_point["id"])
+          note.set_params(_note)
+          note.send
+        end
+      end
+    end
+  end
+    
+  module Note
+    class CreateNote < BringgActionPost
+      def initialize(task_id, way_point_id)
+        @url = "https://developer-api.bringg.com/partner_api/tasks/"+task_id.to_s+"/way_points/"+way_point_id.to_s+"/notes"
+        super()
+      end
+    end  
+  end
+  
+  module Customer
+    class Create < BringgActionPost
+      def initialize
+        @url = "https://developer-api.bringg.com/partner_api/customers" 
+        super
+      end
+      
+      def send
+        super["customer"]
+      end
+    end
+    
+    class Update < BringgActionPatch
+      def initialize(_customer_id)
+        @url = "https://developer-api.bringg.com/partner_api/customers/"+_customer_id.to_s
+        super()
+      end
+      
+      def send
+        super["customer"]
+      end
+    end
+    
+    def self.get(_customer_id)      
+      action = BringgActionGet.new
+      action.url = "https://developer-api.bringg.com/partner_api/customers/"+_customer_id.to_s 
+      res = action.send
+      res["customer"]
+    end
+    
+    def self.get_by_external_id(_external_id)
+      action = BringgActionGet.new
+      action.url = "https://developer-api.bringg.com/partner_api/customers/external_id/"+_external_id.to_s 
+      res = action.send
+      res
+    end
+    
+    def self.fetch_by_external_id(_external_id)
+      begin        
+        customer = get_by_external_id(_external_id)
+        puts customer
+        if block_given?          
+          action = Customer::Update.new(customer["id"])
+          params = yield          
+          action.set_params(params)
+          action.send
+        end
+      rescue BringgApiException::HTTPNotFound => e        
+        if block_given?          
+          action = Customer::Create.new
+          params = yield
+          params[:external_id] = _external_id
+          action.set_params(params)
+          action.send
+        else
+          raise BringgApiException::HTTPNotFound
+        end
+      end
+    end
+  end  
+    
   module BringgApiException
     class MissingOptions < Exception
     end
@@ -118,5 +247,7 @@ module BringgApi
     end
     class HTTPError < Exception
     end
+    class HTTPNotFound < Exception
+    end      
   end
 end

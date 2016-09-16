@@ -48,8 +48,8 @@ module BringgApi
       res = http.request(req)
       
       if res.code == "200"
-        j = JSON.parse(res.body)
-        if j["success"]          
+        j = JSON.parse(res.body)        
+        if (j.has_key?("success") && j["success"]) || !j.has_key?("success") 
           return j
         else
           raise BringgApiException::ActionError, j["message"]
@@ -116,7 +116,41 @@ module BringgApi
       
       if res.code == "200"
         j = JSON.parse(res.body)
-        if j["success"]          
+        if (j.has_key?("success") && j["success"]) || !j.has_key?("success")        
+          return j
+        else
+          raise BringgApiException::ActionError, j["message"]
+        end  
+      else
+        raise BringgApiException::HTTPError, res.code.to_s + " " + res.message
+      end
+    end
+  end
+  
+  class BringgActionDelete < BringgActionPost   
+    attr_accessor :url     
+    def send
+      #Create request
+      uri = URI(@url)
+      req = Net::HTTP::Delete.new(uri.request_uri, 'Content-Type' => 'application/json')
+      
+      #add timestamp and token to params
+      @params[:timestamp] = Time.now().to_i
+      @params[:access_token] = BringgApi.options[:access_token]
+      @params[:company_id] = BringgApi.options[:company_id]
+      tmpQuery = URI.encode_www_form(@params)
+      
+      #sign params      
+      @params[:signature] = OpenSSL::HMAC.hexdigest("sha1", BringgApi.options[:secret_key], tmpQuery).to_s
+            
+      req.body = @params.to_json
+      http = Net::HTTP.new(uri.hostname, uri.port)
+      http.use_ssl = (uri.scheme == "https")
+      res = http.request(req)
+      
+      if res.code == "200"
+        j = JSON.parse(res.body)
+        if (j.has_key?("success") && j["success"]) || !j.has_key?("success")        
           return j
         else
           raise BringgApiException::ActionError, j["message"]
@@ -239,6 +273,46 @@ module BringgApi
       end
     end
   end  
+  
+  module Team
+    class Create < BringgActionPost
+      def initialize
+        @url = "https://developer-api.bringg.com/partner_api/teams"
+        super
+      end      
+    end
+    
+    class Update < BringgActionPatch
+      def initialize(_id)
+        @url = "https://developer-api.bringg.com/partner_api/teams/"+_id.to_s
+        super()
+      end
+    end
+    
+    def self.delete(_id)
+      action = BringgActionDelete.new
+      action.url = "https://developer-api.bringg.com/partner_api/teams/"+_id.to_s
+      res = action.send
+      res["success"]
+    end
+    
+    def self.all
+      action = BringgActionGet.new
+      action.url = "https://developer-api.bringg.com/partner_api/teams" 
+      res = action.send
+      res
+    end
+    
+    def self.get(_team_id)
+      teams = self.all
+      teams.find {|t| t["id"] == _team_id}
+    end
+    
+    def self.get_by_external_id(_external_id)
+      teams = self.all
+      teams.find {|t| t["external_id"] == _external_id}
+    end
+  end
     
   module BringgApiException
     class MissingOptions < Exception

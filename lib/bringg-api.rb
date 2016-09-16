@@ -252,8 +252,7 @@ module BringgApi
     
     def self.fetch_by_external_id(_external_id)
       begin        
-        customer = get_by_external_id(_external_id)
-        puts customer
+        customer = get_by_external_id(_external_id)        
         if block_given?          
           action = Customer::Update.new(customer["id"])
           params = yield          
@@ -322,6 +321,6 @@ module BringgApi
     class HTTPError < Exception
     end
     class HTTPNotFound < Exception
-    end      
+    end
   end
 end

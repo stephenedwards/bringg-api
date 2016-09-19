@@ -168,6 +168,13 @@ module BringgApi
         super
       end   
       
+      def set_params(args)
+        if BringgApi.options.has_key(:default_team) && !args.has_key?(:team_id)
+          args[:team_id] = BringgApi.options[:default_team]
+        end
+        super(args)
+      end
+      
       def send
         result = super["task"]
         @id = result["id"]
@@ -181,6 +188,13 @@ module BringgApi
         @id = nil  
         @result = nil    
         super
+      end
+      
+      def set_params(args)
+        if BringgApi.options.has_key(:default_team) && !args.has_key?(:team_id)
+          args[:team_id] = BringgApi.options[:default_team]
+        end
+        super(args)
       end
       
       def send

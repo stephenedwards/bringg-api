@@ -45,8 +45,7 @@ module BringgApi
       req.body = @params.to_json
       http = Net::HTTP.new(uri.hostname, uri.port)
       http.use_ssl = (uri.scheme == "https")
-      res = http.request(req)
-      
+      res = http.request(req)      
       if res.code == "200"
         j = JSON.parse(res.body)        
         if (j.has_key?("success") && j["success"]) || !j.has_key?("success") 
@@ -113,7 +112,7 @@ module BringgApi
       http = Net::HTTP.new(uri.hostname, uri.port)
       http.use_ssl = (uri.scheme == "https")
       res = http.request(req)
-      
+      puts res.body
       if res.code == "200"
         j = JSON.parse(res.body)
         if (j.has_key?("success") && j["success"]) || !j.has_key?("success")        

@@ -169,7 +169,7 @@ module BringgApi
       end   
       
       def set_params(args)
-        if BringgApi.options.has_key(:default_team) && !args.has_key?(:team_id)
+        if BringgApi.options.has_key?(:default_team) && !args.has_key?(:team_id)
           args[:team_id] = BringgApi.options[:default_team]
         end
         super(args)
